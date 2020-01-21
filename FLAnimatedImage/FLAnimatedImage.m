@@ -178,10 +178,10 @@ static NSHashTable *allAnimatedImagesWeak;
 
 - (instancetype)initWithAnimatedGIFData:(NSData *)data
 {
-    return [self initWithAnimatedGIFData:data optimalFrameCacheSize:0 predrawingEnabled:YES];
+    return [self initWithAnimatedGIFData:data optimalFrameCacheSize:0 predrawingEnabled:YES posterImageIndex:0];
 }
 
-- (instancetype)initWithAnimatedGIFData:(NSData *)data optimalFrameCacheSize:(NSUInteger)optimalFrameCacheSize predrawingEnabled:(BOOL)isPredrawingEnabled
+- (instancetype)initWithAnimatedGIFData:(NSData *)data optimalFrameCacheSize:(NSUInteger)optimalFrameCacheSize predrawingEnabled:(BOOL)isPredrawingEnabled posterImageIndex:(NSUInteger)posterImageIndex
 {
     // Early return if no data supplied!
     const BOOL hasData = (data.length > 0);
@@ -237,7 +237,8 @@ static NSHashTable *allAnimatedImagesWeak;
         // Iterate through frame images
         const size_t imageCount = CGImageSourceGetCount(_imageSource);
         NSUInteger skippedFrameCount = 0;
-        NSMutableDictionary *const delayTimesForIndexesMutable = [NSMutableDictionary dictionaryWithCapacity:imageCount];
+        NSMutableDictionary *delayTimesForIndexesMutable = [NSMutableDictionary dictionaryWithCapacity:imageCount];
+        NSUInteger minPosterImageIndex = posterImageIndex < imageCount ? posterImageIndex : 0;
         for (size_t i = 0; i < imageCount; i++) {
             @autoreleasepool {
                 const CGImageRef _Nullable frameImageRef = CGImageSourceCreateImageAtIndex(_imageSource, i, NULL);
@@ -246,7 +247,7 @@ static NSHashTable *allAnimatedImagesWeak;
                     // Check for valid `frameImage` before parsing its properties as frames can be corrupted (and `frameImage` even `nil` when `frameImageRef` was valid).
                     if (frameImage) {
                         // Set poster image
-                        if (!self.posterImage) {
+                        if (!self.posterImage && i >= minPosterImageIndex) {
                             _posterImage = frameImage;
                             // Set its size to proxy our size.
                             _size = _posterImage.size;
@@ -366,11 +367,10 @@ static NSHashTable *allAnimatedImagesWeak;
 
 - (instancetype)initWithAnimatedGIFWithName:(NSString *)name
 {
-    return [self initWithAnimatedGIFWithName:name optimalFrameCacheSize:0 predrawingEnabled:YES];
+    return [self initWithAnimatedGIFWithName:name optimalFrameCacheSize:0 predrawingEnabled:YES posterImageIndex:0];
 }
 
-
-- (instancetype)initWithAnimatedGIFWithName:(NSString *)name optimalFrameCacheSize:(NSUInteger)optimalFrameCacheSize predrawingEnabled:(BOOL)isPredrawingEnabled
+- (instancetype)initWithAnimatedGIFWithName:(NSString *)name optimalFrameCacheSize:(NSUInteger)optimalFrameCacheSize predrawingEnabled:(BOOL)isPredrawingEnabled posterImageIndex:(NSUInteger)posterImageIndex
 {
     CGFloat scale = [UIScreen mainScreen].scale;
     
@@ -391,7 +391,7 @@ static NSHashTable *allAnimatedImagesWeak;
     }
 
     if (data) {
-        return [self initWithAnimatedGIFData:data optimalFrameCacheSize:optimalFrameCacheSize predrawingEnabled:isPredrawingEnabled];
+        return [self initWithAnimatedGIFData:data optimalFrameCacheSize:optimalFrameCacheSize predrawingEnabled:isPredrawingEnabled posterImageIndex:posterImageIndex];
     }
     
     return nil;
@@ -402,6 +402,11 @@ static NSHashTable *allAnimatedImagesWeak;
 {
     FLAnimatedImage *animatedImage = [[FLAnimatedImage alloc] initWithAnimatedGIFWithName:name];
     return animatedImage;
+}
+
++ (instancetype)animatedImageWithGIFNamed:(NSString *)name posterImageIndex:(NSUInteger)posterImageIndex
+{
+    return [[FLAnimatedImage alloc] initWithAnimatedGIFWithName:name optimalFrameCacheSize:0 predrawingEnabled:YES posterImageIndex:posterImageIndex];
 }
 
 
